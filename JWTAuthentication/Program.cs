@@ -1,3 +1,5 @@
+using Microsoft.OpenApi.Models;
+
 namespace JWTAuthentication
 {
     public class Program
@@ -20,7 +22,7 @@ namespace JWTAuthentication
                     {
                         ValidateIssuer = true,
                         ValidateAudience = true,
-                        ValidateLifetime = true,
+                        ValidateLifetime = false,
                         ValidateIssuerSigningKey = true,
                         ValidIssuer = "https://mysso-server.com",
                         ValidAudience = "https://localhost:7267",
@@ -32,6 +34,7 @@ namespace JWTAuthentication
                     {
                         OnAuthenticationFailed = context =>
                         {
+                            Console.WriteLine("Event here");
                             if (context.Exception.GetType() == typeof(SecurityTokenExpiredException))
                             {
                                 //context.Response.Headers.Add("Token-Expired", "true");
@@ -41,7 +44,48 @@ namespace JWTAuthentication
                     };
                 });
 
+            // Add Swagger UI
+            builder.Services.AddEndpointsApiExplorer();
+
+            builder.Services.AddSwaggerGen(c =>
+            {
+                c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+                {
+                    Name = "Authorization",
+                    Type = SecuritySchemeType.Http,
+                    Scheme = "bearer",
+                    BearerFormat = "JWT",
+                    In = ParameterLocation.Header
+                });
+
+                c.AddSecurityRequirement(new OpenApiSecurityRequirement
+                {
+                    {
+                        new OpenApiSecurityScheme
+                        {
+                            Reference = new OpenApiReference
+                            {
+                                Type = ReferenceType.SecurityScheme,
+                                Id = "Bearer"
+                            }
+                        },
+                        new string[] {}
+                    }
+                });
+            });
+
             var app = builder.Build();
+
+            // Middleware
+            if (app.Environment.IsDevelopment())
+            {
+                app.UseSwagger();
+                app.UseSwaggerUI(c =>
+                {
+                    c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API v1");
+                    c.RoutePrefix = string.Empty; // Swagger UI in root "/"
+                });
+            }
 
             // Configure the HTTP request pipeline.
 
