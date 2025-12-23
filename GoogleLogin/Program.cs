@@ -1,6 +1,8 @@
+using System.Reflection;
+
 namespace GoogleLogin
 {
-    public class Program
+    static class Program
     {
         public static void Main(string[] args)
         {
@@ -11,6 +13,7 @@ namespace GoogleLogin
             builder.Services.AddControllers();
 
             builder.Configuration.AddEnvironmentVariables();
+            var configuration = builder.Configuration;
 
             builder.Services.AddAuthentication(options =>
             {
@@ -18,10 +21,13 @@ namespace GoogleLogin
                 options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
             }).AddCookie().AddGoogle(GoogleDefaults.AuthenticationScheme, options =>
             {
-                //options.ClientId = builder.Configuration.GetSection("GoogleKeys:ClientId").Value;
-                //options.ClientSecret = builder.Configuration.GetSection("GoogleKeys:ClientSecret").Value;
-                options.ClientId = Environment.GetEnvironmentVariable("ClientId");
-                options.ClientSecret = Environment.GetEnvironmentVariable("ClientSecret");
+                var clientIdErrorMessage = "ClientId is missing";
+                options.ClientId = Environment.GetEnvironmentVariable("ClientId") 
+                                        ?? configuration.GetSection("GoogleKeys:ClientId").Value 
+                                        ?? throw new InvalidDataException(clientIdErrorMessage);
+                options.ClientSecret = Environment.GetEnvironmentVariable("ClientSecret") 
+                                        ?? configuration.GetSection("GoogleKeys:ClientSecret").Value 
+                                        ?? throw new InvalidDataException(clientIdErrorMessage);
             });
 
             var app = builder.Build();
@@ -31,7 +37,6 @@ namespace GoogleLogin
             app.UseHttpsRedirection();
 
             app.UseAuthorization();
-
 
             app.MapControllers();
 

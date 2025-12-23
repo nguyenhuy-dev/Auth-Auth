@@ -1,10 +1,13 @@
 using Microsoft.OpenApi.Models;
+using System.Globalization;
 
 namespace JWTAuthentication
 {
-    public class Program
+    static class Program
     {
-        public static void Main(string[] args)
+        private static readonly IFormatProvider? enUs = new CultureInfo("en-US");
+
+        static void Main(string[] args)
         {
             IdentityModelEventSource.ShowPII = true;
 
@@ -21,11 +24,11 @@ namespace JWTAuthentication
                     options.TokenValidationParameters = new TokenValidationParameters
                     {
                         ValidateIssuer = true,
-                        ValidateAudience = true,
+                        ValidateAudience = false,
                         ValidateLifetime = false,
                         ValidateIssuerSigningKey = true,
-                        ValidIssuer = "https://mysso-server.com",
-                        ValidAudience = "https://localhost:7267",
+                        ValidIssuer = "firehorse.org",
+                        ValidAudience = "firehorse.org",
                         IssuerSigningKey = new SymmetricSecurityKey(
                             System.Text.Encoding.UTF8.GetBytes("nguyenquochuynguyenquochuynguyenquochuy"))
                     };
@@ -35,14 +38,30 @@ namespace JWTAuthentication
                         OnAuthenticationFailed = context =>
                         {
                             Console.WriteLine("Event here");
-                            if (context.Exception.GetType() == typeof(SecurityTokenExpiredException))
-                            {
-                                //context.Response.Headers.Add("Token-Expired", "true");
-                            }
                             return Task.CompletedTask;
                         }
                     };
                 });
+
+            builder.Services.AddAuthorizationBuilder()
+                .AddPolicy("Policy1", policy => policy.RequireRole("Student", "Teacher")
+                                                        .RequireClaim("client-id", "client1")
+                                                        .RequireClaim("client-id", "client2"))
+                .AddPolicy("Policy2", policy => policy.RequireRole("Student")
+                                                        .RequireRole("Teacher")
+                                                        .RequireUserName("Nguyen Mai"))
+                .AddPolicy("Policy3", policy => policy.RequireAssertion(context => context.User.Identity?.Name?.StartsWith("Nguyen", StringComparison.OrdinalIgnoreCase) ?? false))
+                .AddPolicy("Policy4", policy => policy.RequireClaim("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/dateofbirth")
+                                                        .RequireAssertion(context =>
+                                                        {
+                                                            string dateString = context.User.Claims.FirstOrDefault(c => c.Type == "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/dateofbirth")!.Value;
+                                                            if (String.IsNullOrEmpty(dateString)) return false;
+
+                                                            bool isDate = DateOnly.TryParseExact(dateString, "yyyy-MM-dd", enUs, DateTimeStyles.None, out DateOnly date) && (date <= DateOnly.FromDateTime(DateTime.Now).AddYears(-18));
+                                                            if (!isDate) return false;
+
+                                                            return true;
+                                                        }));
 
             // Add Swagger UI
             builder.Services.AddEndpointsApiExplorer();
@@ -69,7 +88,7 @@ namespace JWTAuthentication
                                 Id = "Bearer"
                             }
                         },
-                        new string[] {}
+                        Array.Empty<string>()
                     }
                 });
             });
@@ -92,7 +111,6 @@ namespace JWTAuthentication
             app.UseHttpsRedirection();
 
             app.UseAuthorization();
-
 
             app.MapControllers();
 

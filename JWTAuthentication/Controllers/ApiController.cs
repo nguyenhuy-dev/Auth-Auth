@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace JWTAuthentication.Controllers
 {
     [ApiController]
-    public class ApiController : Controller
+    public class ApiController : ControllerBase
     {
         //Để authenticated thì nhiệm vụ của client là phải gửi 1 token thông qua 1 header có tên là authorization
         [Authorize]  //phải đăng nhập thành công với 1 token thì mới gọi được hàm này
@@ -25,6 +25,9 @@ namespace JWTAuthentication.Controllers
                 new HelloContent
                 {
                     Content = $"Hello, {name}!"
+                },
+                new HelloContent {
+                    Content = $"Halo, {name}!!"
                 }
             ];
         }
