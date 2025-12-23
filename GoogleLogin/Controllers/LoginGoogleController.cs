@@ -7,6 +7,7 @@ namespace GoogleLogin.Controllers
     [Route("api/[Controller]")]
     public class LoginGoogleController : Controller
     {
+        [HttpGet]
         public async Task Login()
         {
             await HttpContext.ChallengeAsync(GoogleDefaults.AuthenticationScheme, new AuthenticationProperties
@@ -19,7 +20,7 @@ namespace GoogleLogin.Controllers
         public async Task<IActionResult> GoogleResponse()
         {
             var result = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            var claims = result.Principal.Identities.FirstOrDefault().Claims.Select(c => new
+            var claims = result.Principal?.Identities.FirstOrDefault()?.Claims.Select(c => new
             {
                 c.Issuer,
                 c.OriginalIssuer,
